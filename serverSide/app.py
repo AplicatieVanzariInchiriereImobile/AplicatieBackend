@@ -3,9 +3,12 @@ from models import db, User
 from config import ApplicationConfig
 from flask_bcrypt import Bcrypt
 from flask_session import Session
+from flask_cors import CORS, cross_origin
 
 app = Flask(__name__)
 app.config.from_object(ApplicationConfig)
+
+cors = CORS(app, supports_credentials=True)
 
 #sesiune
 server_session = Session(app)
@@ -17,6 +20,7 @@ with app.app_context():
     db.create_all()
 
 #get data de la user
+@cross_origin
 @app.route("/loggedUserData", methods=["GET"])
 def get_logged_user():
     #daca e sesiune invalida returneaza None
@@ -29,14 +33,17 @@ def get_logged_user():
 
     return jsonify({
         "id": user.id,
-        "email": user.email
+        "email": user.email,
+        "name" : user.name,
+        "role": user.role
     })
 
-
+@cross_origin
 @app.route("/register", methods=["POST"])
 def register_user():
     email = request.json["email"]
     password = request.json["password"]
+    name = request.json["name"]
 
     #daca userul cu credentialele astea exista
     user_exists = User.query.filter_by(email = email).first() is not None
@@ -48,15 +55,20 @@ def register_user():
 
     #cream user nou
     hashed_password = bcrypt.generate_password_hash(password)
-    new_user = User(email = email, password = hashed_password)
+    new_user = User(email = email, password = hashed_password, name = name, role = "client")
     db.session.add(new_user)
     db.session.commit()
 
+    session["user_id"] = new_user.id
+
     return jsonify({
         "id": new_user.id,
-        "email": new_user.email
+        "email": new_user.email,
+        "name" : new_user.name,
+        "role" : new_user.role
     })
 
+@cross_origin
 @app.route("/login", methods=["POST"])
 def login_user():
     email = request.json["email"]
@@ -76,8 +88,17 @@ def login_user():
 
     return jsonify({
         "id": user_exists.id,
-        "email": user_exists.email
+        "email": user_exists.email,
+        "name": user_exists.name,
+        "role": user_exists.role
     })
+
+@cross_origin
+@app.route("/logout", methods=["POST"])
+def logout():
+
+    session.pop("user_id")
+    return "200"
 
 if __name__ == "__main__":
     app.run(debug = True)
