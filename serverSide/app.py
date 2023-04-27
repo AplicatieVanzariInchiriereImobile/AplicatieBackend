@@ -1,5 +1,5 @@
 from flask import Flask, request, abort, jsonify, session
-from models import db, User
+from models import db, User, Vanzari
 from config import ApplicationConfig
 from flask_bcrypt import Bcrypt
 from flask_session import Session
@@ -97,8 +97,93 @@ def login_user():
 @app.route("/logout", methods=["POST"])
 def logout():
 
-    session.pop("user_id")
+    #session.pop("user_id")
     return "200"
+
+
+
+@cross_origin
+@app.route("/getVanzari", methods=["GET"])
+def get_Vanzari():
+    
+    vanzari = Vanzari.query.filter_by().all()
+    #print(vanzari[0].descriere)
+
+    return jsonify(lista_vanzari = [Vanzari.serialize(vanzare) for vanzare in vanzari])
+
+    #return jsonify(vanzari, status=200, mimetype='application/json')
+
+
+@cross_origin
+@app.route("/insertVanzari", methods=["POST"])
+def insert_vanzari():
+    descriere = request.json["descriere"]
+    adresa = request.json["adresa"]
+    pret = request.json["pret"]
+
+    print(descriere)
+    print(adresa)
+    print(pret)
+
+    vanzari_exists = Vanzari.query.filter_by(adresa = adresa).first() is not None
+
+    #daca exista deja un user cu credentiale, trimitem status de conflict
+    if vanzari_exists:
+        #abort(409)
+        return jsonify({"Error": "Vanzari already exists"}), 409
+
+    new_vanzari = Vanzari(descriere = descriere, adresa = adresa, pret = pret)
+    db.session.add(new_vanzari)
+    db.session.commit()
+
+    return jsonify({
+        "id": new_vanzari.id,
+        "descriere": new_vanzari.descriere,
+        "adresa": new_vanzari.adresa,
+        "pret": new_vanzari.pret
+    })
+
+
+
+@cross_origin
+@app.route("/updateVanzari", methods=["POST"])
+def update_vanzari():
+    descriere = request.json["descriere"]
+    adresa = request.json["adresa"]
+    pret = request.json["pret"]
+
+    vanzari_exists = Vanzari.query.filter_by(adresa = adresa).first()
+    if vanzari_exists is None:
+        return jsonify({"Error": "Vanzari not found"}), 404
+    
+    vanzari_exists.descriere = descriere
+    vanzari_exists.pret = pret
+    db.session.commit()
+
+    return jsonify({
+        "id": vanzari_exists.id,
+        "descriere": vanzari_exists.descriere,
+        "adresa": vanzari_exists.adresa,
+        "pret": vanzari_exists.pret
+    })
+
+
+@cross_origin
+@app.route("/deleteVanzari", methods=["POST"])
+def delete_vanzari():
+    adresa = request.json["adresa"]
+
+    vanzari_exists = Vanzari.query.filter_by(adresa = adresa).first()
+    if vanzari_exists is None:
+        return jsonify({"Error": "Vanzari not found"}), 404
+    
+    db.session.delete(vanzari_exists)
+    db.session.commit()
+
+    return jsonify({
+        "id": vanzari_exists.id,
+        "adresa": vanzari_exists.adresa,
+    })
 
 if __name__ == "__main__":
     app.run(debug = True)
