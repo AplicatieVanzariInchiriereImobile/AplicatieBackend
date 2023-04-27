@@ -18,6 +18,7 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
+    #Vanzari.__table__.drop(db.engine)
 
 #get data de la user
 @cross_origin
@@ -120,6 +121,7 @@ def insert_vanzari():
     descriere = request.json["descriere"]
     adresa = request.json["adresa"]
     pret = request.json["pret"]
+    tip = request.json["tip"]
 
     print(descriere)
     print(adresa)
@@ -132,7 +134,7 @@ def insert_vanzari():
         #abort(409)
         return jsonify({"Error": "Vanzari already exists"}), 409
 
-    new_vanzari = Vanzari(descriere = descriere, adresa = adresa, pret = pret)
+    new_vanzari = Vanzari(descriere = descriere, adresa = adresa, pret = pret, tip=tip)
     db.session.add(new_vanzari)
     db.session.commit()
 
@@ -140,7 +142,8 @@ def insert_vanzari():
         "id": new_vanzari.id,
         "descriere": new_vanzari.descriere,
         "adresa": new_vanzari.adresa,
-        "pret": new_vanzari.pret
+        "pret": new_vanzari.pret,
+        "tip": new_vanzari.tip
     })
 
 
@@ -151,6 +154,7 @@ def update_vanzari():
     descriere = request.json["descriere"]
     adresa = request.json["adresa"]
     pret = request.json["pret"]
+    tip = request.json["tip"]
 
     vanzari_exists = Vanzari.query.filter_by(adresa = adresa).first()
     if vanzari_exists is None:
@@ -158,13 +162,15 @@ def update_vanzari():
     
     vanzari_exists.descriere = descriere
     vanzari_exists.pret = pret
+    vanzari_exists.tip = tip
     db.session.commit()
 
     return jsonify({
         "id": vanzari_exists.id,
         "descriere": vanzari_exists.descriere,
         "adresa": vanzari_exists.adresa,
-        "pret": vanzari_exists.pret
+        "pret": vanzari_exists.pret,
+        "tip": vanzari_exists.tip
     })
 
 

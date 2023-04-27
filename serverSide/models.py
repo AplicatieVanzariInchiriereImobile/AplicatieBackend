@@ -21,12 +21,14 @@ class Vanzari(db.Model):
     descriere = db.Column(db.String(300), unique=False)
     adresa = db.Column(db.String(300), unique=False)
     pret = db.Column(db.Integer, unique=False)
+    tip = db.db.Column(db.String(300), unique=False)
 
     def serialize(self):
         return {
             'id': self.id,
             'descriere': self.descriere,
             'adresa': self.adresa,
-            'pret': self.pret
+            'pret': self.pret,
+            'tip': self.tip
         }
 
