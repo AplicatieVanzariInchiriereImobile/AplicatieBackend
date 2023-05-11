@@ -1,9 +1,11 @@
 from flask import Flask, request, abort, jsonify, session
-from models import db, User, Vanzari
+from models import db, User, Vanzari, Programari
 from config import ApplicationConfig
 from flask_bcrypt import Bcrypt
 from flask_session import Session
 from flask_cors import CORS, cross_origin
+
+from datetime import datetime
 
 app = Flask(__name__)
 app.config.from_object(ApplicationConfig)
@@ -18,7 +20,7 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
-    #Vanzari.__table__.drop(db.engine)
+    #Programari.__table__.drop(db.engine)
 
 #get data de la user
 @cross_origin
@@ -190,6 +192,43 @@ def delete_vanzari():
         "id": vanzari_exists.id,
         "adresa": vanzari_exists.adresa,
     })
+
+@cross_origin
+@app.route("/insertProgramari", methods=["POST"])
+def insert_programari():
+    idImobil = request.json["idImobil"]
+    descriereImobil = request.json["descriereImobil"]
+    adresaImobil = request.json["adresaImobil"]
+    pretImobil = request.json["pretImobil"]
+    tipImobil = request.json["tipImobil"]
+    data =  request.json["data"]
+    idUser = request.json["idUser"]
+
+    #schimb din string in tipul datetime inainte sa il inserez
+    dateFormat = datetime.strptime(data, '%Y-%m-%dT%H:%M:%S')
+
+    programari_exists = Programari.query.filter_by(idImobil = idImobil, data = dateFormat).first() is not None
+
+    #daca exista deja un user cu credentiale, trimitem status de conflict
+    if programari_exists:
+        #abort(409)
+        return jsonify({"Error": "A reservation at that hour for that building already exists"}), 409
+
+    new_programare = Programari(idImobil = idImobil, descriereImobil = descriereImobil, adresaImobil = adresaImobil, pretImobil=pretImobil,
+                                tipImobil = tipImobil, data = dateFormat, idUser = idUser)
+    db.session.add(new_programare)
+    db.session.commit()
+
+    return jsonify({
+        "id": new_programare.id,
+        "descriereImobil": new_programare.descriereImobil,
+        "adresaImobil": new_programare.adresaImobil,
+        "pretImobil": new_programare.pretImobil,
+        "tipImobil": new_programare.tipImobil,
+        "data": new_programare.data,
+        "idUser": new_programare.idUser
+    })
+
 
 if __name__ == "__main__":
     app.run(debug = True)

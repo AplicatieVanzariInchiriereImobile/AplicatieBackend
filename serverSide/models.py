@@ -32,3 +32,15 @@ class Vanzari(db.Model):
             'tip': self.tip
         }
 
+
+class Programari(db.Model):
+    __tablename__ = "Programari"
+    id = db.Column(db.String(32), primary_key=True, unique=True, default=get_uuid)
+    idImobil = db.Column(db.String(32), unique=False)
+    descriereImobil = db.Column(db.String(300), unique=False)
+    adresaImobil = db.Column(db.String(300), unique=False)
+    pretImobil = db.Column(db.Integer, unique=False)
+    tipImobil = db.db.Column(db.String(300), unique=False)
+    data =  db.db.Column(db.DateTime, nullable = False)
+    idUser = db.Column(db.String(32), unique=False)
+
