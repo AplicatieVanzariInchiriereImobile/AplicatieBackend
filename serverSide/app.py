@@ -1,3 +1,4 @@
+from calendar import monthrange
 from flask import Flask, request, abort, jsonify, session
 from models import db, User, Vanzari, Programari
 from config import ApplicationConfig
@@ -5,7 +6,7 @@ from flask_bcrypt import Bcrypt
 from flask_session import Session
 from flask_cors import CORS, cross_origin
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config.from_object(ApplicationConfig)
@@ -196,26 +197,61 @@ def delete_vanzari():
 @cross_origin
 @app.route("/insertProgramari", methods=["POST"])
 def insert_programari():
-    idImobil = request.json["idImobil"]
     descriereImobil = request.json["descriereImobil"]
     adresaImobil = request.json["adresaImobil"]
     pretImobil = request.json["pretImobil"]
     tipImobil = request.json["tipImobil"]
     data =  request.json["data"]
-    idUser = request.json["idUser"]
+    emailUser = request.json["emailUser"]
+
+    #find user by email
+    user = User.query.filter_by(email = emailUser).first()
+
+    #find imobil id
+    vanzari = Vanzari.query.filter_by(adresa = adresaImobil).first()
 
     #schimb din string in tipul datetime inainte sa il inserez
     dateFormat = datetime.strptime(data, '%Y-%m-%dT%H:%M:%S')
 
-    programari_exists = Programari.query.filter_by(idImobil = idImobil, data = dateFormat).first() is not None
+    programari_exists = Programari.query.filter_by(idImobil = vanzari.id, data = dateFormat).first() is not None
 
-    #daca exista deja un user cu credentiale, trimitem status de conflict
     if programari_exists:
-        #abort(409)
-        return jsonify({"Error": "A reservation at that hour for that building already exists"}), 409
 
-    new_programare = Programari(idImobil = idImobil, descriereImobil = descriereImobil, adresaImobil = adresaImobil, pretImobil=pretImobil,
-                                tipImobil = tipImobil, data = dateFormat, idUser = idUser)
+        #trebuie sa facem o recomandare de ora disponibila    
+        programari_all = Programari.query.filter_by(idImobil = vanzari.id).all()
+        #print(programari_all)
+        nextHour = dateFormat
+        precedentHour = dateFormat
+        while True:
+            nextHour = nextHour + timedelta(hours=1)
+            programare_exists = Programari.query.filter_by(idImobil = vanzari.id, data = nextHour).first()
+            if programare_exists is None:
+                return jsonify({
+                    "id": "",
+                    "descriereImobil": "",
+                    "adresaImobil": "",
+                    "pretImobil": 0,
+                    "tipImobil": "",
+                    "data": nextHour,
+                    "idUser": ""
+                })
+            precedentHour = precedentHour + timedelta(hours=-1)
+            if precedentHour >= datetime.now():
+                programare_exists = Programari.query.filter_by(idImobil = vanzari.id, data = precedentHour).first()
+                if programare_exists is None:
+                    return jsonify({
+                        "id": "",
+                        "descriereImobil": "",
+                        "adresaImobil": "",
+                        "pretImobil": 0,
+                        "tipImobil": "",
+                        "data": precedentHour,
+                        "idUser": ""
+                    })
+    
+
+    new_programare = Programari(idImobil = vanzari.id, descriereImobil = descriereImobil, adresaImobil = adresaImobil, pretImobil=pretImobil,
+                                tipImobil = tipImobil, data = dateFormat, idUser = user.id)
     db.session.add(new_programare)
     db.session.commit()
 
@@ -229,6 +265,40 @@ def insert_programari():
         "idUser": new_programare.idUser
     })
 
+@cross_origin
+@app.route("/deleteProgramari", methods=["POST"])
+def delete_programari():
+    id = request.json["id"]
+
+    programari_exists = Programari.query.filter_by(id = id).first()
+    if programari_exists is None:
+        return jsonify({"Error": "Programari not found"}), 404
+    
+    db.session.delete(programari_exists)
+    db.session.commit()
+
+    return jsonify({
+        "id": programari_exists.id,
+    })
+
+@cross_origin
+@app.route("/getProgramari/<string:adresa>", methods=["GET"])
+def get_programari(adresa):
+    
+    programari = Programari.query.filter_by(adresaImobil = adresa).all()
+
+    year = datetime.now().year
+    month = datetime.now().month
+
+    programariPerDay = [0] * monthrange(year, month)[1]
+
+    for programare in programari:
+        if programare.data.year == year and programare.data.month == month:
+            print(programare.data, programariPerDay[programare.data.day])
+            programariPerDay[programare.data.day] = programariPerDay[programare.data.day] + 1
+
+
+    return jsonify(programariPerDay)
 
 if __name__ == "__main__":
     app.run(debug = True)
