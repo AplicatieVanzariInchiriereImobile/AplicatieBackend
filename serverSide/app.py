@@ -295,7 +295,7 @@ def get_programari(adresa):
     for programare in programari:
         if programare.data.year == year and programare.data.month == month:
             print(programare.data, programariPerDay[programare.data.day])
-            programariPerDay[programare.data.day] = programariPerDay[programare.data.day] + 1
+            programariPerDay[programare.data.day-1] = programariPerDay[programare.data.day-1] + 1
 
 
     return jsonify(programariPerDay)
