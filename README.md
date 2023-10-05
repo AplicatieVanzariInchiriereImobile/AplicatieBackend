@@ -1,4 +1,4 @@
-To run this project, run the command python ./serverSide/app.py
+To run this project, enter virtual environment in terminal run the command python ./serverSide/app.py
 Open [http://localhost:5000] to view the application running.
 
 This app uses sqlite to store data about users, sold buildings and appointments for the users who want to see a building. Only one user at a time can have an appointment for a building at a specific hour.
